@@ -9,7 +9,7 @@
 
 #define S "403E1F9BAAAF22CC51723F6F8DCCE8F46539FCC1A5C32C6F60776556913119A1"
 
-#define DATA_LENGTH 32 // ell
+#define DATA_LENGTH 32
 #define n (1 << 16) // receiver' data
 #define m (1 << 16) // sender's data
 

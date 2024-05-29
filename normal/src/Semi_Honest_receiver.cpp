@@ -4,8 +4,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <fcntl.h>  // for open
-#include <unistd.h> // for close
+#include <fcntl.h> 
+#include <unistd.h>
 #include <relic.h>
 #include <mutex>
 #include <vector>
@@ -20,18 +20,6 @@ using namespace chrono;
 
 int main(int argc, char *argv[])
 {
-    system_clock::time_point t_time_begin, t_time_end;
-    nanoseconds Setup_time = std::chrono::nanoseconds(0);
-    nanoseconds Registration_time1 = std::chrono::nanoseconds(0);
-    nanoseconds Registration_time2 = std::chrono::nanoseconds(0);
-    nanoseconds Registration_time3 = std::chrono::nanoseconds(0);
-    nanoseconds Communication_time = std::chrono::nanoseconds(0);
-    nanoseconds Extraction_time = std::chrono::nanoseconds(0);
-    nanoseconds Total_time = std::chrono::nanoseconds(0);
-
-    std::cout << "Semi-Honest Model - Receiver:" << std::endl;
-    std::cout << "n = " << n << ", m = " << m << std::endl;
-
     // Init for TCP
     int client_socket;
     struct sockaddr_in server_address;
@@ -61,7 +49,6 @@ int main(int argc, char *argv[])
         std::cout << "TCP/IP: Connection established successfully" << std::endl;
 
     // Setup Phase
-    t_time_begin = system_clock::now();
     if (core_init() != RLC_OK || pc_param_set_any() != RLC_OK)
     {
         printf("Relic initialization failed.\n");
@@ -93,13 +80,7 @@ int main(int argc, char *argv[])
     g1_new(Gamma);
     g1_mul(Gamma, g1, s);
 
-    t_time_end = system_clock::now();
-    Setup_time = duration_cast<nanoseconds>(t_time_end - t_time_begin);
-    Total_time += Setup_time;
-
     // Offline Phase
-    t_time_begin = system_clock::now();
-
     std::vector<bn_t> Y(n);
     std::vector<g2_t> K(n);
 
@@ -125,20 +106,12 @@ int main(int argc, char *argv[])
         g2_new(K[i]);
         g2_mul(K[i], K[i], rho);
     }
-    t_time_end = system_clock::now();
-    Registration_time1 = duration_cast<nanoseconds>(t_time_end - t_time_begin);
-    Total_time += Registration_time1;
 
     // K_i = F(y_i)^(rho * s)
-    t_time_begin = system_clock::now();
     for (int i = 0; i < n; i++)
         g2_mul(K[i], K[i], s);
-    t_time_end = system_clock::now();
-    Registration_time2 = duration_cast<nanoseconds>(t_time_end - t_time_begin);
-    Total_time += Registration_time2;
 
     // K_i = F(y_i)^(s)
-    t_time_begin = system_clock::now();
     bn_t inv_rho;
     bn_null(inv_rho);
     bn_new(inv_rho);
@@ -146,15 +119,9 @@ int main(int argc, char *argv[])
     for (int i = 0; i < n; i++)
         g2_mul(K[i], K[i], inv_rho);
 
-    t_time_end = system_clock::now();
-    Registration_time3 = duration_cast<nanoseconds>(t_time_end - t_time_begin);
-    Total_time += Registration_time3;
-
     send(client_socket, "Hello", strlen("Hello"), 0);
 
     // Communication
-    t_time_begin = system_clock::now();
-
     std::vector<uint8_t *> R(m);
 
     uint8_t PSI[2 * RLC_PC_BYTES + 1];
@@ -170,13 +137,7 @@ int main(int argc, char *argv[])
             printf("Receive failed\n");
     }
 
-    t_time_end = system_clock::now();
-    Communication_time = duration_cast<nanoseconds>(t_time_end - t_time_begin);
-    Total_time += Communication_time;
-
     // Extraction Phase
-    t_time_begin = system_clock::now();
-
     g1_t psi;
     g1_null(psi);
     g1_new(psi);
@@ -204,19 +165,6 @@ int main(int argc, char *argv[])
         free(temp);
         gt_free(e);
     }
-    t_time_end = system_clock::now();
-    Extraction_time = duration_cast<nanoseconds>(t_time_end - t_time_begin);
-    Total_time += Extraction_time;
-
-    std::cout << "Intersection: " << intersection << std::endl;
-    std::cout << "Setup Time = " << to_string(Setup_time.count()) << "(ns)" << std::endl;
-    std::cout << "Communication Time = " << to_string(Communication_time.count()) << "(ns)" << std::endl;
-    std::cout << "Receiver-set registration Time 1 = " << to_string(Registration_time1.count()) << "(ns)" << std::endl;
-    std::cout << "Receiver-set registration Time 2 = " << to_string(Registration_time2.count()) << "(ns)" << std::endl;
-    std::cout << "Receiver-set registration Time 3 = " << to_string(Registration_time3.count()) << "(ns)" << std::endl;
-    std::cout << "Intersection Extraction Time = " << to_string(Extraction_time.count()) << "(ns)" << std::endl;
-    std::cout << "Total Time = " << to_string(Total_time.count()) << "(ns)" << std::endl
-              << std::endl;
 
     for (int i = 0; i < n; ++i)
     {

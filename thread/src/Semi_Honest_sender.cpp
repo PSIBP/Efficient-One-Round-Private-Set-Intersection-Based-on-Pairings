@@ -4,8 +4,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <fcntl.h>  // for open
-#include <unistd.h> // for close
+#include <fcntl.h> 
+#include <unistd.h>
 #include <vector>
 #include <algorithm>
 #include <random>
@@ -58,16 +58,6 @@ void First_Round_2(std::vector<bn_t> &X, std::vector<gt_t> &CHI, const unsigned 
 
 int main(int argc, char *argv[])
 {
-    system_clock::time_point t_time_begin, t_time_end;
-    nanoseconds Setup_time = std::chrono::nanoseconds(0);
-    nanoseconds First_Round_time1 = std::chrono::nanoseconds(0);
-    nanoseconds First_Round_time2 = std::chrono::nanoseconds(0);
-    nanoseconds Communication_time = std::chrono::nanoseconds(0);
-    nanoseconds Total_time = std::chrono::nanoseconds(0);
-
-    std::cout << "Semi-Honest Model - Sender:" << std::endl;
-    std::cout << "n = " << n << ", m = " << m << std::endl;
-
     std::vector<std::thread> threads;
     int rangeSize = m / numThreads;
     int remaining = m % numThreads;
@@ -122,7 +112,6 @@ int main(int argc, char *argv[])
     }
 
     // Setup Phase
-    t_time_begin = system_clock::now();
     if (core_init() != RLC_OK || pc_param_set_any() != RLC_OK)
     {
         printf("Relic initialization failed.\n");
@@ -154,12 +143,7 @@ int main(int argc, char *argv[])
     g1_new(Gamma);
     g1_mul(Gamma, g1, s);
 
-    t_time_end = system_clock::now();
-    Setup_time = duration_cast<nanoseconds>(t_time_end - t_time_begin);
-    Total_time += Setup_time;
-
     // First_Round
-    t_time_begin = system_clock::now();
 
     std::vector<bn_t> X(m);
     std::vector<gt_t> CHI(m);
@@ -197,13 +181,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    t_time_end = system_clock::now();
-    First_Round_time1 = duration_cast<nanoseconds>(t_time_end - t_time_begin);
-    Total_time += First_Round_time1;
-
     threads.clear();
 
-    t_time_begin = system_clock::now();
     start = 0;
     for (int i = 0; i < numThreads; ++i)
     {
@@ -224,10 +203,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    t_time_end = system_clock::now();
-    First_Round_time2 = duration_cast<nanoseconds>(t_time_end - t_time_begin);
-    Total_time += First_Round_time2;
-
     uint8_t PSI[2 * RLC_PC_BYTES + 1];
 
     if (recv(client_socket, PSI, strlen("Hello"), 0) < 0)
@@ -237,7 +212,6 @@ int main(int argc, char *argv[])
     else
         printf("Connection complete\n");
 
-    t_time_begin = system_clock::now();
     memset(PSI, 0x00, 2 * RLC_PC_BYTES + 1);
     g1_write_bin(PSI, 2 * RLC_PC_BYTES + 1, psi, 0);
 
@@ -250,17 +224,6 @@ int main(int argc, char *argv[])
             std::cerr << "TCP/IP: Send failed" << std::endl;
     }
     close(client_socket);
-
-    t_time_end = system_clock::now();
-    Communication_time = duration_cast<nanoseconds>(t_time_end - t_time_begin);
-    Total_time += Communication_time;
-
-    std::cout << "Setup Time = " << to_string(Setup_time.count()) << "(ns)" << std::endl;
-    std::cout << "Communication Time = " << to_string(Communication_time.count()) << "(ns)" << std::endl;
-    std::cout << "First Round Time 1 = " << to_string(First_Round_time1.count()) << "(ns)" << std::endl;
-    std::cout << "First Round Time 2 = " << to_string(First_Round_time2.count()) << "(ns)" << std::endl;
-    std::cout << "Total Time = " << to_string(Total_time.count()) << "(ns)" << std::endl
-              << std::endl;
 
     for (int i = 0; i < m; ++i)
     {
